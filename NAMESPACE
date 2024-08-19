@@ -1,0 +1,8 @@
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
+useDynLib(scPAS, .registration = TRUE)
+export(run_Seurat)
+export(scPAS)
+import(Matrix)
+import(Seurat)
+import(preprocessCore)

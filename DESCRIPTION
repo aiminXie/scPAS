@@ -1,0 +1,14 @@
+Package: scPAS
+Type: Package
+Title: A tool for identifying phenotype-associated single-cell subpopulations by integrating bulk and single-cell sequencing data (scPheno)
+Version: 0.2.0
+Author: c(person("Aimin", "Xie", role = c("aut", "cre"), email = "aiminyy1993@gmail.com"))
+Maintainer: Aimin Xie <aiminyy1993@gmail.com>
+Depends: R (>= 4.0.5)
+Description: scPAS is a novel approach that utilizes the bulk phenotypes, such as disease stage, tumor metastasis, treatment response, and survival outcomes, to identify the most highly phenotype-associated cell subpopulations from single-cell data.
+Imports: Rcpp, Matrix, Seurat, preprocessCore, survival
+LinkingTo: Rcpp, RcppEigen
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.1
