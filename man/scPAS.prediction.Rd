@@ -11,7 +11,7 @@ scPAS.prediction(
   FDR.threshold = 0.05,
   imputation = F,
   imputation_method = "KNN",
-  independent = F
+  independent = T
 )
 }
 \arguments{

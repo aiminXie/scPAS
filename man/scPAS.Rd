@@ -11,12 +11,11 @@ scPAS(
   assay = "RNA",
   tag = NULL,
   nfeature = NULL,
-  imputation = F,
+  imputation = T,
   imputation_method = c("KNN", "ALRA"),
   alpha = NULL,
-  network_class = c("bulk", "SC"),
-  independent = F,
-  cutoff = 0.2,
+  network_class = c("SC", "bulk"),
+  independent = T,
   family = c("gaussian", "binomial", "cox"),
   permutation_times = 2000,
   FDR.threshold = 0.05
@@ -50,23 +49,23 @@ binary group indicator vector, or clinical survival data:
 \item{alpha}{Numeric. Parameter used to balance the effect of the l1 norm and the network-based penalties. It can be a number or a searching vector.
 If \code{alpha = NULL}, a default searching vector is used. The range of alpha is in \code{[0,1]}. A larger alpha lays more emphasis on the l1 norm.}
 
-\item{network_class}{The source of feature-feature similarity network. By default this is set to \code{bulk} and the other one is \code{SC}. The \code{SC} is recommended when the number of bulk data samples is small.}
+\item{network_class}{The source of feature-feature similarity network. By default this is set to \code{sc} and the other one is \code{bulk}.}
 
 \item{independent}{Logical. The background distribution of risk scores is constructed independently of each cell.}
-
-\item{cutoff}{Numeric. Cutoff for the percentage of the scPheno selected features in total features. This parameter is used to restrict the number of the
-scPheno selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.}
 
 \item{family}{Character. Response type for the regression model.  It depends on the type of the given phenotype and
 can be \code{family = gaussian} for linear regression, \code{family = binomial} for classification, or \code{family = cox} for Cox regression.}
 
 \item{FDR.threshold}{Numeric. FDR value threshold for identifying phenotype-associated cells.
 The default is 0.05.}
+
+\item{cutoff}{Numeric. Cutoff for the percentage of the scPAS selected features in total features. This parameter is used to restrict the number of the
+scPAS selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.}
 }
 \value{
-This function returns a list with the following components:
-  \item{para}{ A list contains the final model parameters.}
-  \item{risk_score}{ A data frame containing raw scores, scaled scores and cell classification labels.}
+This function returns a Seurat object with the following components added to :
+  \item{scPAS_para}{ A list contains the final model parameters added to misc.}
+  \item{PAS result}{ A data frame containing risk scores (scPAS_RS), normalized risk scores (scPAS_NRS), p-value (scPAS_Pvalue) , adjusted p-value (scPAS_FDR) cell classification labels (scPAS) added to metaData.}
 }
 \description{
 scPAS : A tool for identifying Phenotype-Associated cell Subpopulations from single-cell sequencing data by integrating bulk data

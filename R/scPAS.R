@@ -19,24 +19,24 @@
 #' @param imputation_method Character. Name of alternative method for imputation.
 #' @param alpha Numeric. Parameter used to balance the effect of the l1 norm and the network-based penalties. It can be a number or a searching vector.
 #' If \code{alpha = NULL}, a default searching vector is used. The range of alpha is in \code{[0,1]}. A larger alpha lays more emphasis on the l1 norm.
-#' @param network_class  The source of feature-feature similarity network. By default this is set to \code{bulk} and the other one is \code{SC}. The \code{SC} is recommended when the number of bulk data samples is small.
-#' @param cutoff Numeric. Cutoff for the percentage of the scPheno selected features in total features. This parameter is used to restrict the number of the
-#' scPheno selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.
+#' @param network_class  The source of feature-feature similarity network. By default this is set to \code{sc} and the other one is \code{bulk}.
+#' @param cutoff Numeric. Cutoff for the percentage of the scPAS selected features in total features. This parameter is used to restrict the number of the
+#' scPAS selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.
 #' @param family Character. Response type for the regression model.  It depends on the type of the given phenotype and
 #' can be \code{family = gaussian} for linear regression, \code{family = binomial} for classification, or \code{family = cox} for Cox regression.
 #' @param FDR.threshold Numeric. FDR value threshold for identifying phenotype-associated cells.
 #' The default is 0.05.
 #' @param independent Logical. The background distribution of risk scores is constructed independently of each cell.
 #'
-#' @return This function returns a list with the following components:
-#'   \item{para}{ A list contains the final model parameters.}
-#'   \item{risk_score}{ A data frame containing raw scores, scaled scores and cell classification labels.}
+#' @return This function returns a Seurat object with the following components added to :
+#'   \item{scPAS_para}{ A list contains the final model parameters added to misc.}
+#'   \item{PAS result}{ A data frame containing risk scores (scPAS_RS), normalized risk scores (scPAS_NRS), p-value (scPAS_Pvalue) , adjusted p-value (scPAS_FDR) cell classification labels (scPAS) added to metaData.}
 #'
 #' @import Seurat Matrix preprocessCore
 #'
 #' @export
 scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,nfeature = NULL,imputation=T,imputation_method=c('KNN','ALRA'),
-                    alpha = NULL,network_class=c('bulk','SC'),independent=T, family = c("gaussian","binomial","cox"),permutation_times=2000,
+                    alpha = NULL,network_class=c('SC','bulk'),independent=T, family = c("gaussian","binomial","cox"),permutation_times=2000,
                     FDR.threshold = 0.05){
   library(Seurat)
   library(Matrix)
@@ -86,15 +86,6 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
     stop("There is no common genes between the given single-cell and bulk samples.")
   }
 
-
-
-
-  #dataset0 <- cbind(bulk_dataset[common,], sc_exprs[common,])         # Dataset before quantile normalization.
-  #dataset1 <- preprocessCore::normalize.quantiles(as.matrix(dataset0))                           # Dataset after  quantile normalization.
-  #rownames(dataset1) <- rownames(dataset0)
-  #colnames(dataset1) <- colnames(dataset0)
-  #Expression_bulk <- dataset1[,1:ncol(bulk_dataset)]
-  #Expression_cell <-  as(dataset1[,(ncol(bulk_dataset) + 1):ncol(dataset1)],'dgCMatrix')
   print("Step 1:Quantile normalization of bulk data.")
   Expression_bulk <- preprocessCore::normalize.quantiles(as.matrix(bulk_dataset))
   rownames(Expression_bulk) <- rownames(bulk_dataset)
@@ -109,7 +100,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
 
   print("Step 2: Extracting single-cell expression profiles....")
   sc_exprs <- GetAssayData(object = sc_dataset, assay = assay,slot = 'data')
-  #Expression_cell <-  as(preprocessCore::normalize.quantiles(as.matrix(sc_exprs)),'dgCMatrix')
+
   Expression_cell <- sc_exprs
   rownames(Expression_cell) <- rownames(sc_exprs)
   colnames(Expression_cell) <- colnames(sc_exprs)
@@ -135,29 +126,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   diag(Network) <- 0
   Network[which(Network >0.2)] <- 1
   Network[which(Network <= 0.2)] <- 0
-  #suppressWarnings(Network <- cor(x))
-  #diag(Network) <- 0
-  #Network[which(is.na(Network))] <- 0
-  #Network[which(Network<0.4)] <- 0
-  #suppressWarnings(Network <- cor(t(Expression_cell)))
-  #diag(Network) <- 0
-  #Network[which(is.na(Network))] <- 0
-  #Network[which(Network >0)] <- 1
 
-  #features_used <- colnames(x)[which(rowSums(Network)>0)]
-  #if(length(features_used)!=ncol(x)){
-  #  x <- x[,features_used]
-  #  Expression_cell <- Expression_cell[features_used,]
-  #  suppressWarnings(Network <- cor(t(Expression_cell)))
-  #  diag(Network) <- 0
-  #  Network[which(is.na(Network))] <- 0
-  #  Network[which(Network>0)] <- 1
-  #Network <- cor(x)
-  #diag(Network) <- 0
-  #Network[which(is.na(Network))] <- 0
-  #Network[which(Network<0.4)] <- 0
-
-  #}
   print("Step 4: Optimizing the network-regularized sparse regression model....")
   if (family == "binomial"){
     y <- as.numeric(phenotype)
@@ -217,11 +186,11 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   rownames(scaled_exp) <- rownames(Expression_cell)
   scaled_exp <- as(scaled_exp, "sparseMatrix")
   risk_score <- crossprod(scaled_exp,Coefs)
-  #risk_score_bulk <- crossprod(t(x),Coefs)
+
   print(paste0("Step 6: qualitative identification by permutation test program with ", as.character(permutation_times), " times random perturbations"))
-  #qnorm(p = 0.95,mean = mean(risk_score_bulk),sd = sd(risk_score_bulk))
+
   set.seed(12345)
-  #background_cell <- scaled_exp[,sample(1:ncol(scaled_exp),size = nsample,replace = F)]
+
   randomPermutation <- sapply(1:permutation_times,FUN = function(x){
     set.seed(1234+x)
     sample(Coefs,length(Coefs),replace = F)
@@ -239,11 +208,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
 
 
   Z <- (risk_score[,1]-mean.background)/sd.background
-  #Z.score <- scale(risk_score[,1])
 
-  #geneCor2RS <- cor(t(as.matrix(scaled_exp)),Z.score)[,1]
-  #geneCor2RS<- geneCor2RS[order(geneCor2RS)]
-  #p.value <- pnorm(q = abs(Z.score),mean = 0,sd = 1,lower.tail = F)
   p.value <- pnorm(q = abs(Z),mean = 0,sd = 1,lower.tail = F)
   q.value <- p.adjust(p = p.value,method = 'BH')
   risk_score_data.frame <- data.frame(cell=colnames(Expression_cell),
@@ -260,7 +225,6 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   sc_dataset@misc$scPAS_para <- list(alpha = alpha[1:i], lambda = lambda, family = family,Coefs=Coefs,bulk=x,phenotype=y,Network=Network)
 
   sc_dataset <- AddMetaData(sc_dataset, metadata = risk_score_data.frame$raw_score, col.name = "scPAS_RS")
-  #sc_dataset <- AddMetaData(sc_dataset, metadata = risk_score_data.frame$Z.score, col.name = "scPAS_Zscore")
 
   sc_dataset <- AddMetaData(sc_dataset, metadata = risk_score_data.frame$Z.statistics, col.name = "scPAS_NRS")
 
@@ -268,8 +232,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   sc_dataset <- AddMetaData(sc_dataset, metadata = risk_score_data.frame$FDR, col.name = "scPAS_FDR")
   sc_dataset <- AddMetaData(sc_dataset, metadata = risk_score_data.frame$cell_lable, col.name = "scPAS")
 
-  #return(list(para = list(alpha = alpha[i], lambda = fit0$lambda.min, family = family,Coefs=Coefs,geneCor2RS=geneCor2RS,bulk=x,Network=Network),
-  #            risk_score = risk_score_data.frame))
+
   print("Finished.")
   return(sc_dataset)
 
@@ -522,7 +485,7 @@ scPAS.prediction <- function(model, test.data,assay='RNA', FDR.threshold=0.05,im
   risk_score <- crossprod(scaled_exp,Coefs)
 
   set.seed(12345)
-  #background_cell <- scaled_exp[,sample(1:ncol(scaled_exp),size = nsample,replace = F)]
+
   randomPermutation <- sapply(1:2000,FUN = function(x){
     set.seed(1234+x)
     sample(Coefs,length(Coefs),replace = F)
@@ -539,7 +502,7 @@ scPAS.prediction <- function(model, test.data,assay='RNA', FDR.threshold=0.05,im
   }
 
   Z <- (risk_score[,1]-mean.background)/sd.background
- # Z.score <- scale(risk_score[,1])
+
 
   p.value <- pnorm(q = abs(Z),mean = 0,sd = 1,lower.tail = F)
   q.value <- p.adjust(p = p.value,method = 'BH')
@@ -557,7 +520,6 @@ scPAS.prediction <- function(model, test.data,assay='RNA', FDR.threshold=0.05,im
   if(any(class(test.data)=='Seurat')){
 
     test.data <- AddMetaData(test.data, metadata = risk_score_data.frame$scPAS_RS, col.name = "scPAS_RS")
-    #test.data <- AddMetaData(test.data, metadata = risk_score_data.frame$scPAS_Zscore, col.name = "scPAS_Zscore")
 
     test.data <- AddMetaData(test.data, metadata = risk_score_data.frame$scPAS_NRS, col.name = "scPAS_NRS")
 
