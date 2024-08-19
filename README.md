@@ -14,3 +14,6 @@ The workflow of scPAS is shown in the following Figure:
 - Install [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) using `install.packages('Rcpp')`.
 - Install [diptest](https://cran.r-project.org/web/packages/Matrix/index.html) using `install.packages('Matrix')`.
 - Install [preprocessCore](https://www.bioconductor.org/packages/release/bioc/html/preprocessCore.html) using `if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install( "preprocessCore")`.
+
+### Tutorial ###
+[scPAS Tutorial](https://github.com/aiminXie/scPAS/vignettes/Scissor_Tutorial.html)
