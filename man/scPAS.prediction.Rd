@@ -4,7 +4,15 @@
 \alias{scPAS.prediction}
 \title{scPAS.prediction: A function that uses the scPAS model to make predictions on independent data}
 \usage{
-scPAS.prediction(model, test.data, assay = "RNA", FDR.threshold = 0.05)
+scPAS.prediction(
+  model,
+  test.data,
+  assay = "RNA",
+  FDR.threshold = 0.05,
+  imputation = F,
+  imputation_method = "KNN",
+  independent = F
+)
 }
 \arguments{
 \item{model}{seurat object. A seurat object containing the scPAS model}

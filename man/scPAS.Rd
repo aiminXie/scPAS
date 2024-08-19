@@ -15,6 +15,7 @@ scPAS(
   imputation_method = c("KNN", "ALRA"),
   alpha = NULL,
   network_class = c("bulk", "SC"),
+  independent = F,
   cutoff = 0.2,
   family = c("gaussian", "binomial", "cox"),
   permutation_times = 2000,
@@ -50,6 +51,8 @@ binary group indicator vector, or clinical survival data:
 If \code{alpha = NULL}, a default searching vector is used. The range of alpha is in \code{[0,1]}. A larger alpha lays more emphasis on the l1 norm.}
 
 \item{network_class}{The source of feature-feature similarity network. By default this is set to \code{bulk} and the other one is \code{SC}. The \code{SC} is recommended when the number of bulk data samples is small.}
+
+\item{independent}{Logical. The background distribution of risk scores is constructed independently of each cell.}
 
 \item{cutoff}{Numeric. Cutoff for the percentage of the scPheno selected features in total features. This parameter is used to restrict the number of the
 scPheno selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.}

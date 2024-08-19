@@ -26,7 +26,7 @@
 #' can be \code{family = gaussian} for linear regression, \code{family = binomial} for classification, or \code{family = cox} for Cox regression.
 #' @param FDR.threshold Numeric. FDR value threshold for identifying phenotype-associated cells.
 #' The default is 0.05.
-#' @param independent description
+#' @param independent Logical. The background distribution of risk scores is constructed independently of each cell.
 #'
 #' @return This function returns a list with the following components:
 #'   \item{para}{ A list contains the final model parameters.}
@@ -35,8 +35,8 @@
 #' @import Seurat Matrix preprocessCore
 #'
 #' @export
-scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,nfeature = NULL,imputation=F,imputation_method=c('KNN','ALRA'),
-                    alpha = NULL,network_class=c('bulk','SC'),independent=F, cutoff = 0.2, family = c("gaussian","binomial","cox"),permutation_times=2000,
+scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,nfeature = NULL,imputation=T,imputation_method=c('KNN','ALRA'),
+                    alpha = NULL,network_class=c('bulk','SC'),independent=T, family = c("gaussian","binomial","cox"),permutation_times=2000,
                     FDR.threshold = 0.05){
   library(Seurat)
   library(Matrix)
@@ -126,7 +126,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
     cor.m <- cor(x)
 
   }else{
-    print("Step 3: Constructing a gene-gene similarity by bulk data....")
+    print("Step 3: Constructing a gene-gene similarity by single cell data....")
     cor.m <- sparse.cor(t(Expression_cell))
   }
   cor.m[which(cor.m<0)] <- 0
@@ -218,7 +218,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   scaled_exp <- as(scaled_exp, "sparseMatrix")
   risk_score <- crossprod(scaled_exp,Coefs)
   #risk_score_bulk <- crossprod(t(x),Coefs)
-
+  print(paste0("Step 6: qualitative identification by permutation test program with ", as.character(permutation_times), " times random perturbations"))
   #qnorm(p = 0.95,mean = mean(risk_score_bulk),sd = sd(risk_score_bulk))
   set.seed(12345)
   #background_cell <- scaled_exp[,sample(1:ncol(scaled_exp),size = nsample,replace = F)]
@@ -270,6 +270,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
 
   #return(list(para = list(alpha = alpha[i], lambda = fit0$lambda.min, family = family,Coefs=Coefs,geneCor2RS=geneCor2RS,bulk=x,Network=Network),
   #            risk_score = risk_score_data.frame))
+  print("Finished.")
   return(sc_dataset)
 
 }
@@ -479,7 +480,7 @@ sparse.cor <- function(x){
 #'@return A seurat object or data frame containing the forecast results.
 #'
 #' @export
-scPAS.prediction <- function(model, test.data,assay='RNA', FDR.threshold=0.05,imputation=F,imputation_method= 'KNN',independent=F){
+scPAS.prediction <- function(model, test.data,assay='RNA', FDR.threshold=0.05,imputation=F,imputation_method= 'KNN',independent=T){
 
 
   model <- model@misc$scPAS_para

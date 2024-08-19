@@ -8,7 +8,7 @@ run_Seurat(
   counts,
   project = "Single_Cell",
   min.cells = 400,
-  min.features = 0,
+  min.features = 200,
   meta.data = NULL,
   normalization.method = "LogNormalize",
   scale.factor = 10000,
