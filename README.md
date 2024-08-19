@@ -6,5 +6,5 @@
 The workflow of scPAS is shown in the following Figure:
 
 <p align="center">
-<img src=Flow_diagram.png height="500" width="492">
+<img src=Flow_diagram.png height="490" width="492">
 </p>
