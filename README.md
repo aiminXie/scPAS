@@ -9,7 +9,10 @@ The workflow of scPAS is shown in the following Figure:
 <img src=Flow_diagram.png height="492" width="700">
 </p>
 
-### Installation of other dependencies if not automatically installed
+### Installation ###
+* System requirements: scPAS is developed under R (version >= 4.0.5).
+* Latest version: the latest developmental version of scPAS can be downloaded from GitHub and installed from source by `devtools::install_github("aiminXie/scPAS")`.
+Installation of other dependencies if not automatically installed
 - Install [Seurat](https://github.com/satijalab/seurat) using `install.packages('Seurat')`.
 - Install [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) using `install.packages('Rcpp')`.
 - Install [Matrix](https://cran.r-project.org/web/packages/Matrix/index.html) using `install.packages('Matrix')`.
