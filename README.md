@@ -11,7 +11,7 @@ The workflow of scPAS is shown in the following Figure:
 
 ### Installation ###
 * System requirements: scPAS is developed under R (version >= 4.0.5).
-* Latest version: the latest developmental version of scPAS can be downloaded from GitHub and installed from source by `devtools::install_github("aiminXie/scPAS")`.
+* scAB R package can be installed from Github using devtools: `devtools::install_github("aiminXie/scPAS")`.
 
 #### Installation of other dependencies if not automatically installed
 - Install [Seurat](https://github.com/satijalab/seurat) using `install.packages('Seurat')`.
