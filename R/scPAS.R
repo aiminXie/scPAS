@@ -20,8 +20,6 @@
 #' @param alpha Numeric. Parameter used to balance the effect of the l1 norm and the network-based penalties. It can be a number or a searching vector.
 #' If \code{alpha = NULL}, a default searching vector is used. The range of alpha is in \code{[0,1]}. A larger alpha lays more emphasis on the l1 norm.
 #' @param network_class  The source of feature-feature similarity network. By default this is set to \code{sc} and the other one is \code{bulk}.
-#' @param cutoff Numeric. Cutoff for the percentage of the scPAS selected features in total features. This parameter is used to restrict the number of the
-#' scPAS selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.
 #' @param family Character. Response type for the regression model.  It depends on the type of the given phenotype and
 #' can be \code{family = gaussian} for linear regression, \code{family = binomial} for classification, or \code{family = cox} for Cox regression.
 #' @param FDR.threshold Numeric. FDR value threshold for identifying phenotype-associated cells.
@@ -171,9 +169,6 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
     print(sprintf("scPAS identified %d rick+ features and %d rick- features.", length(Feature1), length(Feature2)))
     print(sprintf("The percentage of selected feature is: %s%%", formatC(percentage*100, format = 'f', digits = 3)))
 
-    if (percentage < cutoff){
-      break
-    }
     cat("\n")
   }
   print("|**************************************************|")

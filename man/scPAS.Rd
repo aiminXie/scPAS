@@ -58,9 +58,6 @@ can be \code{family = gaussian} for linear regression, \code{family = binomial} 
 
 \item{FDR.threshold}{Numeric. FDR value threshold for identifying phenotype-associated cells.
 The default is 0.05.}
-
-\item{cutoff}{Numeric. Cutoff for the percentage of the scPAS selected features in total features. This parameter is used to restrict the number of the
-scPAS selected features. A cutoff less than \code{50\%} (default \code{20\%}) is recommended depending on the input data.}
 }
 \value{
 This function returns a Seurat object with the following components added to :
