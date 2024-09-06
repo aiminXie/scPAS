@@ -20,4 +20,4 @@ The workflow of scPAS is shown in the following Figure:
 - Install [preprocessCore](https://www.bioconductor.org/packages/release/bioc/html/preprocessCore.html) using `if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install( "preprocessCore")`.
 
 ### Tutorial ###
-[scPAS Tutorial](https://github.com/aiminXie/scPAS/vignettes/scPAS_Tutorial.html)
+[scPAS Tutorial](https://github.com/aiminXie/scPAS/scPAS_Tutorial.html)
