@@ -1,0 +1,286 @@
+---
+title: "scPAS : Single-Cell Phenotype-Associated Subpopulation identifier"
+author: "Aimin Xie"
+date: "2024-08-25"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+mainfont: Arial
+vignette: >
+  %\VignetteIndexEntry{scPAS_Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+	collapse = TRUE,
+	comment = "#>",
+	root.dir = "./",
+	knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+)
+#knitr::opts_chunk$set(eval = FALSE)
+```
+
+
+## Introduction
+
+This scPAS R package is a bioinformatics tool designed to identify phenotype-associated cell subpopulations in single-cell data by integrating bulk data. This approach provides both quantitative and qualitative estimates of the association between cells and phenotypes. The core function of this package is scPAS. It requires three input data: single-cell RNA-seq data, bulk-seq data, and the phenotype of patients in bulk samples. 
+
+## Installation
+
+The scPAS is developed under R (version \>= 4.0.5). scPAS R package can be installed from Github using devtools:
+
+```{r pressure, eval=FALSE}
+devtools::install_github("aiminXie/scPAS")
+```
+
+If it cannot be installed automatically, install the following dependencies:
+
+```{r eval=FALSE,  eval=FALSE}
+install.packages('Seurat')
+install.packages('Rcpp')
+install.packages('Matrix')
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("preprocessCore")
+```
+
+```{r paged.print=FALSE}
+library(scPAS)
+library(Matrix)
+library(Seurat)
+```
+
+## Apply scPAS with Cox regression
+
+In this example, we used TCGA-LIHC bulk samples with survival information to identify survival-related cell subpopulations within the LIHC scRNA-seq data.
+
+### Load data
+
+The data used in this tutorial is stored at: <https://drive.google.com/drive/folders/1Qgdx7YWSkJJ-ZjYHFt9tD33ZC85vQk8o?usp=sharing>
+
+```{r paged.print=FALSE}
+load(file = '../data/data_survival.rda')
+dim(sc_dataset)
+
+head(bulk_dataset[,1:10])
+head(phenotype)
+```
+
+### Prepare the scRNA-seq data
+
+Single-cell data needs to be processed using the Seurat pipeline to create a Seurat object suitable for visualization. To avoid the impact of extremely sparsely expressed genes on the model, they need to be removed beforehand.
+
+```{r}
+keep_genes <- rownames(sc_dataset)[rowSums(sc_dataset@assays$RNA@counts>1) >= 20]
+sc_dataset <- subset(sc_dataset,features = keep_genes)
+
+sc_dataset <- run_Seurat(sc_dataset,verbose = FALSE)
+
+library(RColorBrewer)
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+set.seed(seed = 1234)
+cellType_col <- sample(col_vector, 7)
+names(cellType_col) <- levels(sc_dataset$celltype)
+
+UMAP_celltype <- DimPlot(sc_dataset, reduction ="umap",group.by="celltype",label =T, cols = cellType_col)
+UMAP_celltype
+```
+
+### Prepare the bulk data and phenotype
+
+The bulk data required by scPAS is a matrix. Similarly, genes that are not expressed in the majority of samples in bulk data will also be removed.
+
+```{r}
+bulk_dataset <- as.matrix(bulk_dataset)
+class(bulk_dataset)
+dim(bulk_dataset)
+bulk_dataset = bulk_dataset[apply(bulk_dataset, 1, function(x)sum(x==0) < 0.25 *ncol(bulk_dataset)),]
+dim(bulk_dataset)
+```
+
+The clinical survival phenotype requires a two-column matrix with columns named 'time' and 'status'. The first column contains the survival time. The second column is a binary variable, with '1' indicating event (e.g.recurrence of cancer or death), and '0' indicating right-censored.
+
+```{r}
+head(phenotype)
+```
+
+The phenotypic data must match the samples of the bulk expression profile.
+
+```{r}
+all(rownames(phenotype)==colnames(bulk_dataset))
+```
+
+### Run scPAS without imputation
+
+-   The input provided above is survival data; therefore, scPAS needs to fit a Cox regression model (family = 'cox').
+
+-   imputation = F , without imputation.
+
+-   nfeature = 3000 indicates that the top 3000 highly variable genes are selected for model training.
+
+-   network_class = 'SC' indicates gene-gene similarity networks derived from single-cell data.
+
+```{r warning=FALSE}
+time.start <- Sys.time()
+
+sc_dataset <- scPAS(bulk_dataset = bulk_dataset,sc_dataset = sc_dataset,assay = 'RNA',phenotype = phenotype,imputation = F, nfeature = 3000,alpha = 0.01,network_class = 'SC',family = 'cox')
+time.end <- Sys.time()
+
+time.end-time.start
+```
+
+scPAS will return a Seurat object, and the predicted results are added to the metadata.
+
+```{r}
+head(sc_dataset@meta.data)
+```
+
+The scPAS provides both quantitative (scPAS_NRS) and qualitative (scPAS) prediction results:
+
+```{r fig.height=3.5, fig.width=12, message=FALSE, warning=FALSE}
+library(ggplot2)
+UMAP_scPAS <- DimPlot(sc_dataset, reduction = 'umap',
+                         group.by = 'scPAS',raster=FALSE,
+                         cols = c("0"='grey',"scPAS+"='indianred1',"scPAS-"='royalblue'),
+                         pt.size = 0.001, order = c("scPAS-","scPAS+")) + ggtitle(label = NULL) + labs(col = "scPAS")
+UMAP_RS <- FeaturePlot(object = sc_dataset,raster=FALSE,features = 'scPAS_NRS',max.cutoff = 2,min.cutoff = -2) + scale_colour_gradientn(colours = rev(brewer.pal(n = 10, name = "RdBu")))+
+  ggtitle(label = NULL) + labs(col = "Risk score")
+
+UMAP_celltype | UMAP_RS | UMAP_scPAS
+```
+
+### Run scPAS with imputation
+
+imputation = T , implement single-cell data imputation using the default KNN method.
+
+```{r warning=FALSE}
+time.start <- Sys.time()
+
+sc_dataset <- scPAS(bulk_dataset = bulk_dataset,sc_dataset = sc_dataset,assay = 'RNA',phenotype = phenotype,imputation = T, nfeature = 3000,alpha = 0.01,network_class = 'SC',family = 'cox')
+time.end <- Sys.time()
+
+time.end-time.start
+```
+
+A new assay (imputation) has been created to store the imputed expression profiles.
+
+```{r warning=FALSE}
+sc_dataset
+```
+
+Using imputed expression profiles for prediction, scPAS will capture more cells.
+
+```{r fig.height=3.5, fig.width=12, message=FALSE, warning=FALSE}
+library(ggplot2)
+UMAP_scPAS <- DimPlot(sc_dataset, reduction = 'umap',
+                         group.by = 'scPAS',raster=FALSE,
+                         cols = c("0"='grey',"scPAS+"='indianred1',"scPAS-"='royalblue'),
+                         pt.size = 0.001, order = c("scPAS-","scPAS+")) + ggtitle(label = NULL) + labs(col = "scPAS")
+UMAP_RS <- FeaturePlot(object = sc_dataset,raster=FALSE,features = 'scPAS_NRS',max.cutoff = 2,min.cutoff = -2) + scale_colour_gradientn(colours = rev(brewer.pal(n = 10, name = "RdBu")))+
+  ggtitle(label = NULL) + labs(col = "Risk score")
+
+UMAP_celltype | UMAP_RS | UMAP_scPAS
+```
+
+Other imputation methods can also be used. Users can manually create a new assay (e.g., imputation) to store the imputed expression profiles. By changing the assay parameter in the scPAS function to the corresponding assay name (e.g., assay = 'imputation'), scPAS will use the imputed expression profiles for prediction.
+
+### Apply the trained model to independent bulk data
+
+The returned Seurat object not only contains the prediction results for each single cell but also provides the trained model.
+
+```{r warning=FALSE}
+names(sc_dataset@misc$scPAS_para)
+head(sort(sc_dataset@misc$scPAS_para$Coefs))
+tail(sort(sc_dataset@misc$scPAS_para$Coefs))
+```
+
+Applying this model to other independent bulk data can enable the prediction of prognostic risk for bulk samples.
+
+```{r fig.height=3.5, fig.width=12, message=FALSE, warning=FALSE, paged.print=FALSE}
+load(file = '../data/LIRI_data.Rdata')
+LIRI_exp[1:6,1:6]
+head(LIRI_sur)
+
+```
+
+Use the scPAS.prediction function to perform predictions on independent data.
+
+```{r fig.height=3.5, fig.width=12, message=FALSE, warning=FALSE}
+LIRI_pre_res <- scPAS.prediction(model = sc_dataset,test.data = LIRI_exp)
+head(LIRI_pre_res)
+```
+
+Survival analysis shows that applying this model to the ICGC-LIRI dataset can effectively predict patient survival outcomes.
+
+```{r fig.height=4, fig.width=4, message=FALSE, warning=FALSE}
+library("survival")
+library("survminer")
+LIRI_pre_res$status <- LIRI_sur$status
+LIRI_pre_res$time <- LIRI_sur$time
+
+fit <- survfit(Surv(time, status) ~ scPAS, data = LIRI_pre_res)
+survplot_LIRI <- ggsurvplot(
+  fit, title='LIRI',
+  data = LIRI_pre_res,
+  size = 1,                
+  conf.int = F,         
+  pval.method = TRUE,
+  pval = TRUE,            
+  risk.table = F,       
+  risk.table.height = 0.25,
+  xlab ='Days',
+  ylab='Survival probability',
+  legend=c(0.7,0.2),
+  legend.title=''
+)
+
+survplot_LIRI$plot
+```
+
+### Apply the trained model to spatial transcriptomics data
+
+```{r fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
+ST_data <- readRDS(file = '../data/HCC_ST_L2.RDS')
+
+SP1 <- SpatialDimPlot(ST_data, label = F, repel = T, label.size = 4,group.by = 'seurat_clusters',alpha = 0,
+                      pt.size.factor = 1.6) + theme(legend.position = 'None')
+SP2 <- SpatialDimPlot(ST_data, label = T,stroke = NA, repel = T, label.size = 4,group.by = 'seurat_clusters',alpha = 0.9,
+                      pt.size.factor = 1.35) + theme(legend.position = "bottom")
+SP1 | SP2
+```
+
+Directly applying the trained model to spatial transcriptomics data can reveal the spatial localization of prognostic-related cells
+
+```{r fig.height=3.5, fig.width=12, message=FALSE, warning=FALSE, paged.print=FALSE}
+ST_data <- scPAS.prediction(model = sc_dataset,test.data = ST_data,assay = 'Spatial',imputation = T,independent = T)
+head(ST_data)
+```
+
+The results show that cells associated with poor survival are primarily located in regions enriched with malignant liver cancer cells.
+
+```{r fig.height=4, fig.width=12, warning=FALSE, , message=FALSE, paged.print=FALSE}
+
+p3 <- SpatialFeaturePlot(ST_data, features = "scPAS_NRS",stroke=NA,pt.size.factor = 1.27,min.cutoff = -2,max.cutoff = 2)  + 
+  ggtitle(label = NULL) + theme(legend.position = "top") + scale_fill_gradientn(name='Risk score',colours = Seurat:::SpatialColors(n = 100))
+
+p4 <- SpatialDimPlot(ST_data,group.by = 'histology',cols = c("malignant"='indianred1',"non-malignant"= NA), stroke=NA,
+                     alpha = c(1,0.1),pt.size.factor = 1.27) + ggtitle(label = NULL) + labs(col = "pathologists") + theme(legend.position = "top")
+
+p5 <- SpatialDimPlot(ST_data,group.by = 'scPAS',cols = c("0"='grey',"scPAS+"='indianred1',"scPAS-"='royalblue'), stroke=NA,
+                     alpha = c(1,0.1),pt.size.factor = 1.27) + ggtitle(label = NULL) + labs(col = "scPAS") + theme(legend.position = "top")
+
+p4 | p3 | p5
+```
+
+## Information about the current R session
+
+```{r}
+sessionInfo()
+```
