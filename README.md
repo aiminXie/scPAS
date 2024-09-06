@@ -11,7 +11,7 @@ The workflow of scPAS is shown in the following Figure:
 
 ### Installation ###
 * System requirements: scPAS is developed under R (version >= 4.0.5).
-* scAB R package can be installed from Github using devtools: `devtools::install_github("aiminXie/scPAS")`.
+* scPAS R package can be installed from Github using devtools: `devtools::install_github("aiminXie/scPAS")`.
 
 #### Installation of other dependencies if not automatically installed
 - Install [Seurat](https://github.com/satijalab/seurat) using `install.packages('Seurat')`.
@@ -20,4 +20,4 @@ The workflow of scPAS is shown in the following Figure:
 - Install [preprocessCore](https://www.bioconductor.org/packages/release/bioc/html/preprocessCore.html) using `if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install( "preprocessCore")`.
 
 ### Tutorial ###
-[scPAS Tutorial](https://github.com/aiminXie/scPAS/vignettes/Scissor_Tutorial.html)
+[scPAS Tutorial](https://github.com/aiminXie/scPAS/vignettes/scPAS_Tutorial.html)
