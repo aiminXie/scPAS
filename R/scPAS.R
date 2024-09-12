@@ -98,7 +98,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
 
   print("Step 2: Extracting single-cell expression profiles....")
   sc_exprs <- GetAssayData(object = sc_dataset, assay = assay,slot = 'data')
-
+  #Expression_cell <- as(preprocessCore::normalize.quantiles(as.matrix(sc_exprs)), "dgCMatrix")
   Expression_cell <- sc_exprs
   rownames(Expression_cell) <- rownames(sc_exprs)
   colnames(Expression_cell) <- colnames(sc_exprs)
@@ -179,6 +179,7 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
 
   colnames(scaled_exp) <- colnames(Expression_cell)
   rownames(scaled_exp) <- rownames(Expression_cell)
+  scaled_exp[which(is.na(scaled_exp))] <- 0
   scaled_exp <- as(scaled_exp, "sparseMatrix")
   risk_score <- crossprod(scaled_exp,Coefs)
 
