@@ -97,7 +97,11 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   }
 
   print("Step 2: Extracting single-cell expression profiles....")
-  sc_exprs <- GetAssayData(object = sc_dataset, assay = assay,slot = 'data')
+    if(substr(packageVersion("Seurat"),1,1)=='5'){
+    sc_exprs <- GetAssayData(object = sc_dataset, assay = assay,layer = 'data')
+  }else{
+    sc_exprs <- GetAssayData(object = sc_dataset, assay = assay,slot = 'data')
+  }
   #Expression_cell <- as(preprocessCore::normalize.quantiles(as.matrix(sc_exprs)), "dgCMatrix")
   Expression_cell <- sc_exprs
   rownames(Expression_cell) <- rownames(sc_exprs)
@@ -351,7 +355,11 @@ imputation_ALRA <- function(obj,assay='RNA'){
   library(ALRA)
   library(Matrix)
   library(Seurat)
-  data <- GetAssayData(object = obj, assay = assay,slot = 'data')
+  if(substr(packageVersion("Seurat"),1,1)=='5'){
+    data <- GetAssayData(object = obj, assay = assay,layer = 'data')
+  }else{
+    data <- GetAssayData(object = obj, assay = assay,slot = 'data')
+  }
   data_alra <- t(alra(t(as.matrix(data)))[[3]])
   colnames(data_alra) <- colnames(data)
   data_alra <- Matrix(data_alra, sparse = T)
@@ -376,7 +384,11 @@ imputation_ALRA <- function(obj,assay='RNA'){
 imputation_KNN <- function (obj,assay='RNA', LogNormalized = T)
 {
   library(Matrix)
-  exp_sc <- GetAssayData(object = obj, assay = assay,slot = 'data')
+  if(substr(packageVersion("Seurat"),1,1)=='5'){
+    exp_sc <- GetAssayData(object = obj, assay = assay,layer = 'data')
+  }else{
+    exp_sc <- GetAssayData(object = obj, assay = assay,slot = 'data')
+  }
   nn_network <- obj@graphs[[paste0(assay, "_nn")]]
   #nn_network <- obj@graphs$RNA_nn
   if (!is(object = exp_sc, class2 = "sparseMatrix")) {
@@ -449,7 +461,11 @@ scPAS.prediction <- function(model, test.data,assay='RNA', FDR.threshold=0.05,im
       test.data <- imputation(test.data,assay = assay,method = imputation_method)
       assay <- DefaultAssay(test.data)
     }
-    test.exp <- GetAssayData(object = test.data, assay = assay,slot = 'data')
+    if(substr(packageVersion("Seurat"),1,1)=='5'){
+      test.exp <- GetAssayData(object = test.data, assay = assay,layer = 'data')
+    }else{
+      test.exp <- GetAssayData(object = test.data, assay = assay,slot = 'data')
+    }
     Expression_cell <- test.exp
     rownames(Expression_cell) <- rownames(test.exp)
     colnames(Expression_cell) <- colnames(test.exp)
