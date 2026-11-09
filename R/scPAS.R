@@ -25,6 +25,9 @@
 #' @param FDR.threshold Numeric. FDR value threshold for identifying phenotype-associated cells.
 #' The default is 0.05.
 #' @param independent Logical. The background distribution of risk scores is constructed independently of each cell.
+#' @param permutation_times Numeric. The times for permutation. The default is 2000.
+#' @param skip_quantile_norm Logical. Whether to skip the built-in quantile normalization step. If TRUE, please ensure the input bulk expresion matrix has already been quantile-normalized externally.
+#' The defaule is FALSE.
 #'
 #' @return This function returns a Seurat object with the following components added to :
 #'   \item{scPAS_para}{ A list contains the final model parameters added to misc.}
@@ -35,7 +38,7 @@
 #' @export
 scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,nfeature = NULL,imputation=T,imputation_method=c('KNN','ALRA'),
                     alpha = NULL,network_class=c('SC','bulk'),independent=T, family = c("gaussian","binomial","cox"),permutation_times=2000,
-                    FDR.threshold = 0.05){
+                    FDR.threshold = 0.05,skip_quantile_norm=FALSE){
   library(Seurat)
   library(Matrix)
   library(preprocessCore)
@@ -83,12 +86,37 @@ scPAS <- function(bulk_dataset, sc_dataset, phenotype,assay = 'RNA', tag = NULL,
   if (length(common) == 0) {
     stop("There is no common genes between the given single-cell and bulk samples.")
   }
+  if(!skip_quantile_norm){
+      print("Step 1:Quantile normalization of bulk data.")
+      Expression_bulk <- tryCatch({
+        preprocessCore::normalize.quantiles(as.matrix(bulk_dataset))
+      }, error = function(e){
+        if(grepl("return code from pthread_create() is 22", e$message, fixed = TRUE)){
+          stop(
+        "Known upstream bug detected: preprocessCore pthread_create() error 22.\n",
+        "This is a compatibility issue of preprocessCore >=1.68.0 on glibc 2.35 large multi-core Linux servers.\n",
+        "Available workarounds:\n",
+        "1. Downgrade preprocessCore to version <1.68\n",
+        "2. Apply source patch to preprocessCore\n",
+        "3. Set skip_quantile_norm = TRUE and provide pre-quantile-normalized bulk matrix\n",
+        "Original error:\n", e$message,
+        call. = FALSE
+          )
+        }else{
+          stop(e$message, call. = FALSE)
+        }
 
-  print("Step 1:Quantile normalization of bulk data.")
-  Expression_bulk <- preprocessCore::normalize.quantiles(as.matrix(bulk_dataset))
-  rownames(Expression_bulk) <- rownames(bulk_dataset)
-  colnames(Expression_bulk) <- colnames(bulk_dataset)
-  Expression_bulk <- Expression_bulk[common,]
+      })
+      rownames(Expression_bulk) <- rownames(bulk_dataset)
+      colnames(Expression_bulk) <- colnames(bulk_dataset)
+      Expression_bulk <- Expression_bulk[common,]
+  }else{
+    message("skip_quantile_norm = TRUE. Skipping built-in quantile normalization. ",
+            "Please ensure your expression matrix has already been quantile-normalized.")
+    Expression_bulk <- bulk_dataset[common,]
+  }
+
+
 
 
   if(imputation){

@@ -18,7 +18,8 @@ scPAS(
   independent = T,
   family = c("gaussian", "binomial", "cox"),
   permutation_times = 2000,
-  FDR.threshold = 0.05
+  FDR.threshold = 0.05,
+  skip_quantile_norm = FALSE
 )
 }
 \arguments{
@@ -56,8 +57,13 @@ If \code{alpha = NULL}, a default searching vector is used. The range of alpha i
 \item{family}{Character. Response type for the regression model.  It depends on the type of the given phenotype and
 can be \code{family = gaussian} for linear regression, \code{family = binomial} for classification, or \code{family = cox} for Cox regression.}
 
+\item{permutation_times}{Numeric. The times for permutation. The default is 2000.}
+
 \item{FDR.threshold}{Numeric. FDR value threshold for identifying phenotype-associated cells.
 The default is 0.05.}
+
+\item{skip_quantile_norm}{Logical. Whether to skip the built-in quantile normalization step. If TRUE, please ensure the input bulk expresion matrix has already been quantile-normalized externally.
+The defaule is FALSE.}
 }
 \value{
 This function returns a Seurat object with the following components added to :
